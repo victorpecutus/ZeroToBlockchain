@@ -39,9 +39,12 @@ function CreateOrder(purchase) {
     purchase.order.buyer = purchase.buyer;
     purchase.order.amount = purchase.amount;
     purchase.order.financeCo = purchase.financeCo;
-    /*
-    ** Your Code Goes Here
-    */
+    purchase.order.created = new Date().toISOString();
+    purchase.order.status = JSON.stringify(orderStatus.Created);
+    return getAssetRegistry('org.acme.Z2BTestNetwork.Order')
+        .then(function (assetRegistry) {
+            return assetRegistry.update(purchase.order);
+        });
 }
 /**
  * Record a request to purchase
@@ -53,10 +56,13 @@ function Buy(purchase) {
     {
         purchase.order.buyer = purchase.buyer;
         purchase.order.seller = purchase.seller;
-    /*
-    ** Your Code Goes Here
-    */
-    }
+        purchase.order.bought = new Date().toISOString();
+        purchase.order.status = JSON.stringify(orderStatus.Bought);
+        return getAssetRegistry('org.acme.Z2BTestNetwork.Order')
+            .then(function (assetRegistry) {
+                return assetRegistry.update(purchase.order);
+            });
+        }
 }
 /**
  * Record a request to cancel an order
@@ -64,14 +70,17 @@ function Buy(purchase) {
  * @transaction
  */
 function OrderCancel(purchase) {
-    if ((purchase.order.status == JSON.stringify(orderStatus.Created)) || (purchase.order.status == JSON.stringify(orderStatus.Bought)))
+    if ((purchase.order.status == JSON.stringify(orderStatus.Created)) || (purchase.order.status == JSON.stringify(orderStatus.Bought)) || (purchase.order.status == JSON.stringify(orderStatus.Backordered)))
     {
         purchase.order.buyer = purchase.buyer;
         purchase.order.seller = purchase.seller;
-        /*
-        ** Your Code Goes Here
-        */
-    }
+        purchase.order.cancelled = new Date().toISOString();
+        purchase.order.status = JSON.stringify(orderStatus.Cancelled);
+        return getAssetRegistry('org.acme.Z2BTestNetwork.Order')
+            .then(function (assetRegistry) {
+                return assetRegistry.update(purchase.order);
+            });
+        }
 }
 /**
  * Record a request to order by seller from supplier
@@ -82,10 +91,13 @@ function OrderFromSupplier(purchase) {
     if (purchase.order.status == JSON.stringify(orderStatus.Bought))
     {
         purchase.order.provider = purchase.provider;
-        /*
-        ** Your Code Goes Here
-        */
-    }
+        purchase.order.ordered = new Date().toISOString();
+        purchase.order.status = JSON.stringify(orderStatus.Ordered);
+        return getAssetRegistry('org.acme.Z2BTestNetwork.Order')
+            .then(function (assetRegistry) {
+                return assetRegistry.update(purchase.order);
+            });
+        }
 }
 /**
  * Record a request to ship by supplier to shipper
@@ -93,13 +105,16 @@ function OrderFromSupplier(purchase) {
  * @transaction
  */
 function RequestShipping(purchase) {
-    if (purchase.order.status == JSON.stringify(orderStatus.Ordered))
+    if ((purchase.order.status == JSON.stringify(orderStatus.Ordered)) || (purchase.order.status == JSON.stringify(orderStatus.Backordered)))
     {
         purchase.order.shipper = purchase.shipper;
-        /*
-        ** Your Code Goes Here
-        */
-    }
+        purchase.order.requestShipment = new Date().toISOString();
+        purchase.order.status = JSON.stringify(orderStatus.ShipRequest);
+        return getAssetRegistry('org.acme.Z2BTestNetwork.Order')
+            .then(function (assetRegistry) {
+                return assetRegistry.update(purchase.order);
+            });
+        }
 }
 /**
  * Record a delivery by shipper
@@ -112,10 +127,12 @@ function Delivering(purchase) {
         purchase.order.delivering = new Date().toISOString();
         var _status = orderStatus.Delivering;
         _status.text += '  '+purchase.deliveryStatus;
-        /*
-        ** Your Code Goes Here
-        */
-    }
+        purchase.order.status = JSON.stringify(_status);
+        return getAssetRegistry('org.acme.Z2BTestNetwork.Order')
+            .then(function (assetRegistry) {
+                return assetRegistry.update(purchase.order);
+            });
+        }
 }
 /**
  * Record a delivery by shipper
@@ -125,10 +142,13 @@ function Delivering(purchase) {
 function Deliver(purchase) {
     if ((purchase.order.status == JSON.stringify(orderStatus.ShipRequest)) || (JSON.parse(purchase.order.status).code == orderStatus.Delivering.code))
     {
-        /*
-        ** Your Code Goes Here
-        */
-    }
+        purchase.order.delivered = new Date().toISOString();
+        purchase.order.status = JSON.stringify(orderStatus.Delivered);
+        return getAssetRegistry('org.acme.Z2BTestNetwork.Order')
+            .then(function (assetRegistry) {
+                return assetRegistry.update(purchase.order);
+            });
+        }
 }
  /**
  * Record a request for payment by the seller
@@ -137,11 +157,14 @@ function Deliver(purchase) {
  */
 function RequestPayment(purchase) {
     if ((JSON.parse(purchase.order.status).text == orderStatus.Delivered.text) || (JSON.parse(purchase.order.status).text == orderStatus.Resolve.text))
-        {purchase.order.status = JSON.stringify(orderStatus.PayRequest);
+    {
+        purchase.order.status = JSON.stringify(orderStatus.PayRequest);
         purchase.order.financeCo = purchase.financeCo;
-        /*
-        ** Your Code Goes Here
-        */
+        purchase.order.paymentRequested = new Date().toISOString();
+        return getAssetRegistry('org.acme.Z2BTestNetwork.Order')
+            .then(function (assetRegistry) {
+                return assetRegistry.update(purchase.order);
+            });
     }
 }
  /**
@@ -151,10 +174,13 @@ function RequestPayment(purchase) {
  */
 function AuthorizePayment(purchase) {
     if ((JSON.parse(purchase.order.status).text == orderStatus.PayRequest.text ) || (JSON.parse(purchase.order.status).text == orderStatus.Resolve.text ))
-    {purchase.order.status = JSON.stringify(orderStatus.Authorize);
-        /*
-        ** Your Code Goes Here
-        */
+    {
+        purchase.order.status = JSON.stringify(orderStatus.Authorize);
+        purchase.order.approved = new Date().toISOString();
+        return getAssetRegistry('org.acme.Z2BTestNetwork.Order')
+            .then(function (assetRegistry) {
+                return assetRegistry.update(purchase.order);
+            });
     }
 }
  /**
@@ -165,9 +191,11 @@ function AuthorizePayment(purchase) {
 function Pay(purchase) {
     if (JSON.parse(purchase.order.status).text == orderStatus.Authorize.text )
         {purchase.order.status = JSON.stringify(orderStatus.Paid);
-        /*
-        ** Your Code Goes Here
-        */
+        purchase.order.paid = new Date().toISOString();
+        return getAssetRegistry('org.acme.Z2BTestNetwork.Order')
+            .then(function (assetRegistry) {
+                return assetRegistry.update(purchase.order);
+            });
     }
 }
  /**
@@ -176,10 +204,13 @@ function Pay(purchase) {
  * @transaction
  */
 function Dispute(purchase) {
-        purchase.order.status = JSON.stringify(orderStatus.Dispute);
-        /*
-        ** Your Code Goes Here
-        */
+    purchase.order.status = JSON.stringify(orderStatus.Dispute);
+    purchase.order.dispute = purchase.dispute;
+    purchase.order.disputeOpened = new Date().toISOString();
+    return getAssetRegistry('org.acme.Z2BTestNetwork.Order')
+        .then(function (assetRegistry) {
+            return assetRegistry.update(purchase.order);
+        });
 }
  /**
  * Resolve a seller initiated dispute
@@ -187,31 +218,43 @@ function Dispute(purchase) {
  * @transaction
  */
 function Resolve(purchase) {
-        purchase.order.status = JSON.stringify(orderStatus.Resolve);
-        /*
-        ** Your Code Goes Here
-        */
-    }
-    /**
+    purchase.order.status = JSON.stringify(orderStatus.Resolve);
+    purchase.order.resolve = purchase.resolve;
+    purchase.order.disputeResolved = new Date().toISOString();
+    return getAssetRegistry('org.acme.Z2BTestNetwork.Order')
+        .then(function (assetRegistry) {
+            return assetRegistry.update(purchase.order);
+        });
+}
+ /**
  * Record a refund to the buyer
  * @param {org.acme.Z2BTestNetwork.Refund} purchase - the order to be processed
  * @transaction
  */
 function Refund(purchase) {
-        /*
-        ** Your Code Goes Here
-        */
-    }
-    /**
+    purchase.order.status = JSON.stringify(orderStatus.Refund);
+    purchase.order.refund = purchase.refund;
+    purchase.order.orderRefunded = new Date().toISOString();
+    return getAssetRegistry('org.acme.Z2BTestNetwork.Order')
+        .then(function (assetRegistry) {
+            return assetRegistry.update(purchase.order);
+        });
+}
+ /**
  * Record a backorder by the supplier
  * @param {org.acme.Z2BTestNetwork.BackOrder} purchase - the order to be processed
  * @transaction
  */
 function BackOrder(purchase) {
-        /*
-        ** Your Code Goes Here
-        */
-    }
+    purchase.order.status = JSON.stringify(orderStatus.Backordered);
+    purchase.order.backorder = purchase.backorder;
+    purchase.order.dateBackordered = new Date().toISOString();
+    purchase.order.provider = purchase.provider;
+    return getAssetRegistry('org.acme.Z2BTestNetwork.Order')
+    .then(function (assetRegistry) {
+        return assetRegistry.update(purchase.order);
+    });
+}
 
 /**
  * display using console.log the properties of each property in the inbound object

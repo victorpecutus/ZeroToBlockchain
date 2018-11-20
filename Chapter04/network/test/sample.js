@@ -14,11 +14,17 @@
 
 'use strict';
 
+const AdminConnection = require('composer-admin').AdminConnection;
 const BusinessNetworkConnection = require('composer-client').BusinessNetworkConnection;
+const BusinessNetworkDefinition = require('composer-common').BusinessNetworkDefinition;
+
+const hlc_idCard = require('composer-common').IdCard;
+const path = require('path');
+const _home = require('os').homedir();
 
 require('chai').should();
 
-// const network = 'zerotoblockchain-network';
+const network = 'zerotoblockchain-network';
 const _timeout = 90000;
 const NS = 'org.acme.Z2BTestNetwork';
 const orderNo = '12345';
